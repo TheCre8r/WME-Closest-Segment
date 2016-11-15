@@ -9,7 +9,6 @@
 // @include      https://www.waze.com/editor/*
 // @include      https://www.waze.com/*/editor/*
 // @include      https://editor-beta.waze.com/*
-// @namespace
 // @namespace https://greasyfork.org/users/9321
 // ==/UserScript==
 
