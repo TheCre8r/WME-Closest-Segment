@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	0.9
+// @version      	0.92
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -14,13 +14,26 @@
 
 (function () {
 	var alertUpdate = true,
-	closestVersion = "0.9",
+	closestVersion = "0.92",
 	closestChanges = "WME Closest Segment has been updated to version " +
 		closestVersion + ".\n" +
-		"* Lots of performance optimizations \n" +
-		"",
+		"[*]Quick fix for last version which broke the script in Firefox \n" +
+		"[*]Improved finding nearest segment",
 	closestLayerName = "WME Closest Segment",
-	segmentsInExtent = {};
+	segmentsInExtent = {},
+	lineStyle = {
+		strokeWidth : 4,
+		strokeColor : null, /* gets set in drawLine() depending on feature */
+		strokeLinecap : 'round'
+	},
+	pointStyle = {
+		pointRadius : 6,
+		fillColor : 'white',
+		fillOpacity : 1,
+		strokeColor : '#00d8ff',
+		strokeWidth : '3',
+		strokeLinecap : 'round'
+	};
 
 	function getSegmentsInExtent() {
 		"use strict";
@@ -28,11 +41,9 @@
 		s,
 		segments,
 		mapExtent;
-		
-		if (!checkConditions()) return;
-		
+
 		console.log("WME CS: Getting segments in map extent.");
-		
+
 		segments = W.model.segments.objects;
 		mapExtent = W.map.getExtent();
 		segmentsInExtent = {};
@@ -50,6 +61,7 @@
 	}
 
 	function clearLayerFeatures() {
+		"use strict";
 		var layer = W.map.getLayersByName(closestLayerName)[0];
 		return layer.features.length > 0 && layer.removeAllFeatures();
 	}
@@ -57,14 +69,14 @@
 	function checkConditions() {
 		"use strict";
 		var a = W.map.getZoom() > 3,
-			b = W.map.landmarkLayer.getVisibility(),
-			c = W.map.getLayersByName(closestLayerName)[0].getVisibility(),		
-			navPoint = W.geometryEditing.editors.venue.navigationPoint;
-		
+		b = W.map.landmarkLayer.getVisibility(),
+		c = W.map.getLayersByName(closestLayerName)[0].getVisibility(),
+		navPoint = W.geometryEditing.editors.venue.navigationPoint;
+
 		if (a && b && c) {
 			W.geometryEditing.editors.venue.dragControl.onDrag = function (e, t) {
 				W.geometryEditing.editors.venue.dragVertex.apply(W.geometryEditing.editors.venue, [e, t]);
-				findNearestSegment();
+				checkSelection();
 			};
 			/* console.log('WME CS: Enabled'); */
 			return true;
@@ -83,18 +95,23 @@
 		}
 	}
 
-	function drawLine(start, end) {
+	function drawLine(closestSegment) {
 		"use strict";
-		var lineFeature = new OL.Feature.Vector(new OL.Geometry.LineString([start, end]), {}, {
-				strokeWidth : 2,
-				strokeColor : '#00ece3'
-			}),
-		pointFeature = new OL.Feature.Vector(end, {}, {
-				pointRadius : 6,
-				fillColor : 'white',
-				fillOpacity : 1,
-				strokeColor : '#00ece3'
-			});
+		var start = closestSegment.featureStop,
+		end = closestSegment.point,
+		lineFeature,
+		pointFeature;
+
+		if (closestSegment.featureIsPoint) {
+			lineStyle.strokeColor = '#00ece3';
+			pointStyle.strokeColor = '#00ece3';
+		} else {
+			lineStyle.strokeColor = '#00d8ff';
+			pointStyle.strokeColor = '#00d8ff';
+		}
+
+		lineFeature = new OL.Feature.Vector(new OL.Geometry.LineString([start, end]), {}, lineStyle);
+		pointFeature = new OL.Feature.Vector(end, {}, pointStyle);
 		W.map.getLayersByName(closestLayerName)[0].addFeatures([lineFeature, pointFeature]);
 	}
 
@@ -108,10 +125,15 @@
 		closestSegment = {};
 
 		selectedItem = W.selectionManager.selectedItems.first();
-		closestSegment.featureStop = selectedItem.model.isPoint() ?
-			selectedItem.model.geometry : W.geometryEditing.editors.venue.navigationPoint.lonlat.toPoint();
-		segmentsInExtent = jQuery.isEmptyObject(segmentsInExtent) ? getSegmentsInExtent() : segmentsInExtent;
-		
+
+		if (selectedItem.model.isPoint()) {
+			closestSegment.featureStop = selectedItem.model.geometry;
+			closestSegment.featureIsPoint = true;
+		} else {
+			closestSegment.featureStop = W.geometryEditing.editors.venue.navigationPoint.lonlat.toPoint();
+			closestSegment.featureIsPoint = false;
+		}
+
 		for (s in segmentsInExtent) {
 			if (!segmentsInExtent.hasOwnProperty(s))
 				continue;
@@ -131,9 +153,9 @@
 				closestSegment.point = new OL.Geometry.Point(distanceToSegment.x1, distanceToSegment.y1);
 			}
 		}
-		
+
 		clearLayerFeatures();
-		drawLine(closestSegment.featureStop, closestSegment.point);
+		drawLine(closestSegment);
 	}
 
 	function checkSelection() {
@@ -143,8 +165,9 @@
 
 		/* console.log("WME CS: Selection change called."); */
 
-		if (!checkConditions()) return;
-		
+		if (!checkConditions())
+			return;
+
 		if (W.selectionManager.hasSelectedItems()) {
 			selectedItem = W.selectionManager.selectedItems[0];
 			if ('venue' !== selectedItem.model.type) {
@@ -155,7 +178,10 @@
 			/* console.log('WME CS: No item selected.'); */
 			return clearLayerFeatures();
 		}
-		
+
+		/* Load segments in map extent */
+		getSegmentsInExtent();
+
 		if (selectedItem.model.isPoint()) {
 			/* console.log('WME CS: Selection is point venue.'); */
 			findNearestSegment();
@@ -187,12 +213,22 @@
 
 		/* Event listeners */
 		W.loginManager.events.register("afterloginchanged", this, init);
-		W.map.events.register("moveend", this, getSegmentsInExtent);
 		W.model.actionManager.events.register("afterundoaction", this, checkSelection);
 		W.model.actionManager.events.register("afteraction", this, checkSelection);
 		W.selectionManager.events.register("selectionchanged", this, checkSelection);
 
-		getSegmentsInExtent();
+		/* Shortcut */
+		W.accelerators.addAction('closestSegment', {
+			group : "editing"
+		});
+		W.accelerators.events.register('closestSegment', null, function () {
+			var layer = W.map.getLayersByName(closestLayerName)[0];
+			layer.setVisibility(!layer.getVisibility());
+		});
+		W.accelerators.registerShortcuts({
+			'CS+c' : "closestSegment"
+		});
+
 		checkSelection();
 
 		console.log('WME CS: Initialized.');
