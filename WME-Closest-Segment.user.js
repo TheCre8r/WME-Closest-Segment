@@ -1,7 +1,9 @@
+/* global OL */
+/* global W */
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	0.93
+// @version      	1.00
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -14,29 +16,28 @@
 
 (function () {
 	var alertUpdate = true,
-	closestVersion = "0.93",
-	closestChanges = "WME Closest Segment has been updated to version " +
-		closestVersion + ".\n" +
-		"[*]Bug fix: line no longer drawn outside of map area \n" +
-		"[*]Bug fix: editing house numbers now works correctly with this script enabled",
-	closestLayerName = "WME Closest Segment",
-	debugLevel = 0,
-	segmentsInExtent = {},
-	navPoint,
-	selectedItem,
-	lineStyle = {
-		strokeWidth : 4,
-		strokeColor : null, /* gets set in drawLine() */
-		strokeLinecap : 'round'
-	},
-	pointStyle = {
-		pointRadius : 6,
-		fillColor : 'white',
-		fillOpacity : 1,
-		strokeColor : null, /* gets set in drawLine() */
-		strokeWidth : '3',
-		strokeLinecap : 'round'
-	};
+		closestVersion = "1.00",
+		closestChanges = "WME Closest Segment has been updated to version " +
+			closestVersion + ".\n\n" +
+			"[*] Ignores pedestrian boardwalk, stairways, runways, and railroads when finding the closest segment.",
+		closestLayerName = "WME Closest Segment",
+		debugLevel = 0,
+		segmentsInExtent = {},
+		navPoint,
+		selectedItem,
+		lineStyle = {
+			strokeWidth: 4,
+			strokeColor: null, /* gets set in drawLine() */
+			strokeLinecap: 'round'
+		},
+		pointStyle = {
+			pointRadius: 6,
+			fillColor: 'white',
+			fillOpacity: 1,
+			strokeColor: null, /* gets set in drawLine() */
+			strokeWidth: '3',
+			strokeLinecap: 'round'
+		};
 
 	function log(message, level) {
 		if (message && level <= debugLevel) {
@@ -47,9 +48,9 @@
 	function getSegmentsInExtent() {
 		"use strict";
 		var i,
-		s,
-		segments,
-		mapExtent;
+			s,
+			segments,
+			mapExtent;
 
 		log("Getting segments in map extent.", 2);
 
@@ -94,9 +95,9 @@
 	function checkConditions() {
 		"use strict";
 		var a = W.map.getZoom() > 3,
-		b = W.map.landmarkLayer.getVisibility(),
-		c = W.map.getLayersByName(closestLayerName)[0].getVisibility(),
-		d = !$('#map-lightbox').is(":visible"); /* Check for HN editing */
+			b = W.map.landmarkLayer.getVisibility(),
+			c = W.map.getLayersByName(closestLayerName)[0].getVisibility(),
+			d = !$('#map-lightbox').is(":visible"); /* Check for HN editing */
 
 		if (a && b && c && d) {
 			log('Conditions are perfect.', 2);
@@ -114,7 +115,7 @@
 		if (null !== typeof navPoint) {
 			try {
 				navPoint.events.unregister("drag", W.geometryEditing.editors.venue, findNearestSegment);
-			} catch (err) {}
+			} catch (err) { }
 		}
 		clearLayerFeatures();
 	}
@@ -122,9 +123,9 @@
 	function drawLine(closestSegment) {
 		"use strict";
 		var start = closestSegment.featureStop,
-		end = closestSegment.point,
-		lineFeature,
-		pointFeature;
+			end = closestSegment.point,
+			lineFeature,
+			pointFeature;
 
 		if (closestSegment.featureIsPoint) {
 			lineStyle.strokeColor = '#00ece3';
@@ -142,10 +143,10 @@
 	function findNearestSegment() {
 		"use strict";
 		var s,
-		minDistance = Infinity,
-		distanceToSegment,
-		segments,
-		closestSegment = {};
+			minDistance = Infinity,
+			distanceToSegment,
+			segmentType,
+			closestSegment = {};
 
 		if (selectedItem.model.isPoint()) {
 			closestSegment.featureStop = selectedItem.model.geometry;
@@ -154,18 +155,26 @@
 			closestSegment.featureStop = W.geometryEditing.editors.venue.navigationPoint.lonlat.toPoint();
 			closestSegment.featureIsPoint = false;
 		}
-
 		for (s in segmentsInExtent) {
-			if (!segmentsInExtent.hasOwnProperty(s))
+			if (!segmentsInExtent.hasOwnProperty(s)) {
 				continue;
+			}
+			/* Ignore pedestrian boardwalk, stairways, runways, and railroads */
+			segmentType = segmentsInExtent[s].attributes.roadType;
+			if (segmentType === 10 ||
+				segmentType === 16 ||
+				segmentType === 18 ||
+				segmentType === 19) {
+				continue;
+			}
 			if (selectedItem.model.isPoint()) {
 				distanceToSegment = selectedItem.geometry.distanceTo(segmentsInExtent[s].geometry, {
-						details : true
-					});
+					details: true
+				});
 			} else {
 				distanceToSegment = W.geometryEditing.editors.venue.navigationPoint.lonlat.toPoint().distanceTo(
-						segmentsInExtent[s].geometry, {
-						details : true
+					segmentsInExtent[s].geometry, {
+						details: true
 					});
 			}
 			if (distanceToSegment.distance < minDistance) {
@@ -184,7 +193,7 @@
 		log('Selection change called.', 2);
 
 		navPoint = W.geometryEditing.editors.venue.navigationPoint;
-		
+
 		if (!checkConditions()) {
 			removeDragCallbacks();
 		} else {
@@ -217,9 +226,9 @@
 					}
 				}
 			} else {
-					log('No item selected.', 2);
-					removeDragCallbacks();
-					clearLayerFeatures();
+				log('No item selected.', 2);
+				removeDragCallbacks();
+				clearLayerFeatures();
 			}
 		}
 	}
@@ -230,7 +239,7 @@
 
 		/* Check version and alert on update */
 		if (alertUpdate && ('undefined' === window.localStorage.closestVersion ||
-				closestVersion !== window.localStorage.closestVersion)) {
+			closestVersion !== window.localStorage.closestVersion)) {
 			alert(closestChanges);
 			window.localStorage.closestVersion = closestVersion;
 		}
@@ -248,14 +257,14 @@
 
 		/* Shortcut */
 		W.accelerators.addAction('closestSegment', {
-			group : "layers"
+			group: "layers"
 		});
 		W.accelerators.events.register('closestSegment', null, function () {
 			var layer = W.map.getLayersByName(closestLayerName)[0];
 			layer.setVisibility(!layer.getVisibility());
 		});
 		W.accelerators.registerShortcuts({
-			'CS+c' : "closestSegment"
+			'CS+c': "closestSegment"
 		});
 
 		checkSelection();
