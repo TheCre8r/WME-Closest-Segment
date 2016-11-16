@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	0.8
+// @version      	0.9
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -13,14 +13,74 @@
 // ==/UserScript==
 
 (function () {
-	function inMapExtent(e) {
+	var alertUpdate = true,
+	closestVersion = "0.9",
+	closestChanges = "WME Closest Segment has been updated to version " +
+		closestVersion + ".\n" +
+		"* Lots of performance optimizations \n" +
+		"",
+	closestLayerName = "WME Closest Segment",
+	segmentsInExtent = {};
+
+	function getSegmentsInExtent() {
 		"use strict";
-		return W.map.getExtent().intersectsBounds(e.geometry.getBounds());
+		var i,
+		s,
+		segments,
+		mapExtent;
+		
+		if (!checkConditions()) return;
+		
+		console.log("WME CS: Getting segments in map extent.");
+		
+		segments = W.model.segments.objects;
+		mapExtent = W.map.getExtent();
+		segmentsInExtent = {};
+
+		for (i in segments) {
+			if (!segments.hasOwnProperty(i)) {
+				continue;
+			}
+			s = W.model.segments.get(i);
+			if (mapExtent.intersectsBounds(s.geometry.getBounds())) {
+				segmentsInExtent[i] = s;
+			}
+		}
+		return segmentsInExtent;
 	}
 
 	function clearLayerFeatures() {
-		var layer = W.map.getLayersByName("Closest Segment")[0];
+		var layer = W.map.getLayersByName(closestLayerName)[0];
 		return layer.features.length > 0 && layer.removeAllFeatures();
+	}
+
+	function checkConditions() {
+		"use strict";
+		var a = W.map.getZoom() > 3,
+			b = W.map.landmarkLayer.getVisibility(),
+			c = W.map.getLayersByName(closestLayerName)[0].getVisibility(),		
+			navPoint = W.geometryEditing.editors.venue.navigationPoint;
+		
+		if (a && b && c) {
+			W.geometryEditing.editors.venue.dragControl.onDrag = function (e, t) {
+				W.geometryEditing.editors.venue.dragVertex.apply(W.geometryEditing.editors.venue, [e, t]);
+				findNearestSegment();
+			};
+			/* console.log('WME CS: Enabled'); */
+			return true;
+		} else {
+			W.geometryEditing.editors.venue.dragControl.onDrag = function (e, t) {
+				W.geometryEditing.editors.venue.dragVertex.apply(W.geometryEditing.editors.venue, [e, t]);
+			};
+			if (null !== typeof navPoint && 'undefined' !== typeof navPoint) {
+				try {
+					navPoint.events.unregister("drag", W.geometryEditing.editors.venue, findNearestSegment);
+				} catch (err) {}
+			}
+			clearLayerFeatures();
+			/* console.log('WME CS: Disabled'); */
+			return false;
+		}
 	}
 
 	function drawLine(start, end) {
@@ -35,49 +95,44 @@
 				fillOpacity : 1,
 				strokeColor : '#00ece3'
 			});
-		clearLayerFeatures();
-		W.map.getLayersByName("Closest Segment")[0].addFeatures([lineFeature, pointFeature]);
+		W.map.getLayersByName(closestLayerName)[0].addFeatures([lineFeature, pointFeature]);
 	}
 
 	function findNearestSegment() {
 		"use strict";
-		var i,
-		s,
+		var s,
 		minDistance = Infinity,
 		distanceToSegment,
 		segments,
 		selectedItem,
 		closestSegment = {};
 
-		/* Zoom must be at least 4 in order to see streets */
-		if (W.map.getZoom() < 4) {
-			console.log('WME CS: Zoom too low.');
-			return;
-		}
-		
 		selectedItem = W.selectionManager.selectedItems.first();
-		closestSegment.featureStop = selectedItem.model.isPoint() ? selectedItem.model.geometry : W.geometryEditing.activeEditor.navigationPoint.lonlat.toPoint();
-		segments = W.model.segments.objects;
-		for (i in segments) {
-			s = W.model.segments.get(i);
-			if (inMapExtent(s)) {
-				if (selectedItem.model.isPoint()) {
-					distanceToSegment = selectedItem.geometry.distanceTo(s.geometry, {
-							details : true
-						});
-				} else {
-					distanceToSegment = W.geometryEditing.activeEditor.navigationPoint.lonlat.toPoint().distanceTo(s.geometry, {
-							details : true
-						});
-				}
-				if (distanceToSegment.distance < minDistance) {
-					minDistance = distanceToSegment.distance;
-					closestSegment.seg = i;
-					closestSegment.point = new OL.Geometry.Point(distanceToSegment.x1, distanceToSegment.y1);
-				}
+		closestSegment.featureStop = selectedItem.model.isPoint() ?
+			selectedItem.model.geometry : W.geometryEditing.editors.venue.navigationPoint.lonlat.toPoint();
+		segmentsInExtent = jQuery.isEmptyObject(segmentsInExtent) ? getSegmentsInExtent() : segmentsInExtent;
+		
+		for (s in segmentsInExtent) {
+			if (!segmentsInExtent.hasOwnProperty(s))
+				continue;
+			if (selectedItem.model.isPoint()) {
+				distanceToSegment = selectedItem.geometry.distanceTo(segmentsInExtent[s].geometry, {
+						details : true
+					});
+			} else {
+				distanceToSegment = W.geometryEditing.editors.venue.navigationPoint.lonlat.toPoint().distanceTo(
+						segmentsInExtent[s].geometry, {
+						details : true
+					});
+			}
+			if (distanceToSegment.distance < minDistance) {
+				minDistance = distanceToSegment.distance;
+				closestSegment.seg = s;
+				closestSegment.point = new OL.Geometry.Point(distanceToSegment.x1, distanceToSegment.y1);
 			}
 		}
-		/* console.log(minDistance, closestSegment); */
+		
+		clearLayerFeatures();
 		drawLine(closestSegment.featureStop, closestSegment.point);
 	}
 
@@ -86,40 +141,37 @@
 		var selectedItem,
 		navPoint;
 
-		//console.log("Selection change called.");
+		/* console.log("WME CS: Selection change called."); */
 
+		if (!checkConditions()) return;
+		
 		if (W.selectionManager.hasSelectedItems()) {
 			selectedItem = W.selectionManager.selectedItems[0];
 			if ('venue' !== selectedItem.model.type) {
-				//console.log('Selection is not a place.');
-				return;
+				/* console.log('WME CS: Selection is not a place.'); */
+				return clearLayerFeatures();
 			}
 		} else {
-			//console.log('No item selected.');
+			/* console.log('WME CS: No item selected.'); */
 			return clearLayerFeatures();
 		}
-
+		
 		if (selectedItem.model.isPoint()) {
-			//console.log('Selection is point venue.');
+			/* console.log('WME CS: Selection is point venue.'); */
 			findNearestSegment();
 		} else {
-			//console.log('Selection is area venue');
-			navPoint = W.geometryEditing.activeEditor.navigationPoint;
+			/* console.log('WME CS: Selection is area venue'); */
+			navPoint = W.geometryEditing.editors.venue.navigationPoint;
 			if (null !== typeof navPoint && 'undefined' !== typeof navPoint) {
 				findNearestSegment();
-				navPoint.events.register("drag", W.geometryEditing.activeEditor, findNearestSegment);
+				navPoint.events.register("drag", W.geometryEditing.editors.venue, findNearestSegment);
 			}
 		}
 	}
 
 	function init() {
 		"use strict";
-		var alertUpdate = true,
-		closestVersion = "0.8",
-		closestChanges = "WME Closest Segment has been updated to version " +
-			closestVersion + ".\n" +
-			"*First published version--beta" +
-			"*";
+		var closestLayer;
 
 		/* Check version and alert on update */
 		if (alertUpdate && ('undefined' === window.localStorage.closestVersion ||
@@ -128,18 +180,21 @@
 			window.localStorage.closestVersion = closestVersion;
 		}
 
+		/* Add map layer */
+		closestLayer = new OL.Layer.Vector(closestLayerName);
+		closestLayer.events.register("visibilitychanged", closestLayer, checkSelection);
+		W.map.addLayer(closestLayer);
+
 		/* Event listeners */
 		W.loginManager.events.register("afterloginchanged", this, init);
-		W.model.actionManager.events.register("afterundoaction", this, clearLayerFeatures);
+		W.map.events.register("moveend", this, getSegmentsInExtent);
+		W.model.actionManager.events.register("afterundoaction", this, checkSelection);
+		W.model.actionManager.events.register("afteraction", this, checkSelection);
 		W.selectionManager.events.register("selectionchanged", this, checkSelection);
 
-		W.geometryEditing.editors.venue.dragControl.onDrag = function (e, t) {
-			W.geometryEditing.activeEditor.dragVertex.apply(W.geometryEditing.activeEditor, [e, t]);
-			findNearestSegment();
-		};
+		getSegmentsInExtent();
+		checkSelection();
 
-		/* Add map layer */
-		W.map.addLayer(new OL.Layer.Vector("Closest Segment"));
 		console.log('WME CS: Initialized.');
 	}
 
