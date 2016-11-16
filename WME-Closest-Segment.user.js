@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.0.1
+// @version      	1.0.2
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -12,14 +12,15 @@
 // @include			https://www.waze.com/*/editor/*
 // @include			https://editor-beta.waze.com/*
 // @namespace		https://greasyfork.org/users/9321
+// @require		    https://greasyfork.org/scripts/9794-wlib/code/wLib.js?version=106098
 // ==/UserScript==
 
 (function () {
 	var alertUpdate = true,
-		closestVersion = '1.0.1',
+		closestVersion = '1.0.2',
 		closestChanges = 'WME Closest Segment has been updated to version ' +
 			closestVersion + '.\n\n' +
-			'[*] Updated to work in Firefox version 44.',
+			'[*] Updated for beta editor compatibility.',
 		closestLayerName = 'WME Closest Segment',
 		debugLevel = 0,
 		segmentsInExtent = {},
@@ -254,18 +255,6 @@
 		W.model.actionManager.events.register('afterundoaction', this, checkSelection);
 		W.model.actionManager.events.register('afteraction', this, checkSelection);
 		W.selectionManager.events.register('selectionchanged', this, checkSelection);
-
-		/* Shortcut */
-		W.accelerators.addAction('closestSegment', {
-			group: 'layers'
-		});
-		W.accelerators.events.register('closestSegment', null, function () {
-			var layer = W.map.getLayersByName(closestLayerName)[0];
-			layer.setVisibility(!layer.getVisibility());
-		});
-		W.accelerators.registerShortcuts({
-			'CS+c': 'closestSegment'
-		});
 
 		checkSelection();
 
