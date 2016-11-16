@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.00
+// @version      	1.0.1
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -16,11 +16,11 @@
 
 (function () {
 	var alertUpdate = true,
-		closestVersion = "1.00",
-		closestChanges = "WME Closest Segment has been updated to version " +
-			closestVersion + ".\n\n" +
-			"[*] Ignores pedestrian boardwalk, stairways, runways, and railroads when finding the closest segment.",
-		closestLayerName = "WME Closest Segment",
+		closestVersion = '1.0.1',
+		closestChanges = 'WME Closest Segment has been updated to version ' +
+			closestVersion + '.\n\n' +
+			'[*] Updated to work in Firefox version 44.',
+		closestLayerName = 'WME Closest Segment',
 		debugLevel = 0,
 		segmentsInExtent = {},
 		navPoint,
@@ -46,13 +46,13 @@
 	}
 
 	function getSegmentsInExtent() {
-		"use strict";
+		'use strict';
 		var i,
 			s,
 			segments,
 			mapExtent;
 
-		log("Getting segments in map extent.", 2);
+		log('Getting segments in map extent.', 2);
 
 		segments = W.model.segments.objects;
 		mapExtent = W.map.getExtent();
@@ -78,7 +78,7 @@
 	}
 
 	function clearLayerFeatures() {
-		"use strict";
+		'use strict';
 		var layer = W.map.getLayersByName(closestLayerName)[0];
 		return layer.features.length > 0 && layer.removeAllFeatures();
 	}
@@ -87,17 +87,17 @@
 		if (selectedItem !== W.selectionManager.selectedItems.first() ||
 			inMapExtent(navPoint.lonlat.toPoint())) {
 			log('Selection changed or navPoint on screen.', 2);
-			W.map.events.unregister("moveend", window, handleNavPointOffScreen);
+			W.map.events.unregister('moveend', window, handleNavPointOffScreen);
 			checkSelection();
 		}
 	}
 
 	function checkConditions() {
-		"use strict";
+		'use strict';
 		var a = W.map.getZoom() > 3,
 			b = W.map.landmarkLayer.getVisibility(),
 			c = W.map.getLayersByName(closestLayerName)[0].getVisibility(),
-			d = !$('#map-lightbox').is(":visible"); /* Check for HN editing */
+			d = !$('#map-lightbox').is(':visible'); /* Check for HN editing */
 
 		if (a && b && c && d) {
 			log('Conditions are perfect.', 2);
@@ -114,14 +114,14 @@
 		};
 		if (null !== typeof navPoint) {
 			try {
-				navPoint.events.unregister("drag", W.geometryEditing.editors.venue, findNearestSegment);
+				navPoint.events.unregister('drag', W.geometryEditing.editors.venue, findNearestSegment);
 			} catch (err) { }
 		}
 		clearLayerFeatures();
 	}
 
 	function drawLine(closestSegment) {
-		"use strict";
+		'use strict';
 		var start = closestSegment.featureStop,
 			end = closestSegment.point,
 			lineFeature,
@@ -141,7 +141,7 @@
 	}
 
 	function findNearestSegment() {
-		"use strict";
+		'use strict';
 		var s,
 			minDistance = Infinity,
 			distanceToSegment,
@@ -189,7 +189,7 @@
 	}
 
 	function checkSelection() {
-		"use strict";
+		'use strict';
 		log('Selection change called.', 2);
 
 		navPoint = W.geometryEditing.editors.venue.navigationPoint;
@@ -215,12 +215,12 @@
 					} else {
 						log('Selection is area venue.', 2);
 						if (null !== typeof navPoint) {
-							navPoint.events.register("drag", W.geometryEditing.editors.venue, findNearestSegment);
+							navPoint.events.register('drag', W.geometryEditing.editors.venue, findNearestSegment);
 							if (inMapExtent(navPoint.lonlat.toPoint())) {
 								findNearestSegment();
 							} else {
 								log('navPoint not on screen.', 2);
-								W.map.events.register("moveend", window, handleNavPointOffScreen);
+								W.map.events.register('moveend', window, handleNavPointOffScreen);
 							}
 						}
 					}
@@ -234,7 +234,7 @@
 	}
 
 	function init() {
-		"use strict";
+		'use strict';
 		var closestLayer;
 
 		/* Check version and alert on update */
@@ -246,25 +246,25 @@
 
 		/* Add map layer */
 		closestLayer = new OL.Layer.Vector(closestLayerName);
-		closestLayer.events.register("visibilitychanged", closestLayer, checkSelection);
+		closestLayer.events.register('visibilitychanged', closestLayer, checkSelection);
 		W.map.addLayer(closestLayer);
 
 		/* Event listeners */
-		W.loginManager.events.register("afterloginchanged", this, init);
-		W.model.actionManager.events.register("afterundoaction", this, checkSelection);
-		W.model.actionManager.events.register("afteraction", this, checkSelection);
-		W.selectionManager.events.register("selectionchanged", this, checkSelection);
+		W.loginManager.events.register('afterloginchanged', this, init);
+		W.model.actionManager.events.register('afterundoaction', this, checkSelection);
+		W.model.actionManager.events.register('afteraction', this, checkSelection);
+		W.selectionManager.events.register('selectionchanged', this, checkSelection);
 
 		/* Shortcut */
 		W.accelerators.addAction('closestSegment', {
-			group: "layers"
+			group: 'layers'
 		});
 		W.accelerators.events.register('closestSegment', null, function () {
 			var layer = W.map.getLayersByName(closestLayerName)[0];
 			layer.setVisibility(!layer.getVisibility());
 		});
 		W.accelerators.registerShortcuts({
-			'CS+c': "closestSegment"
+			'CS+c': 'closestSegment'
 		});
 
 		checkSelection();
@@ -273,26 +273,11 @@
 	}
 
 	function bootstrap() {
-		var bGreasemonkeyServiceDefined = false;
-		try {
-			if ("object" === typeof Components.interfaces.gmIGreasemonkeyService) {
-				bGreasemonkeyServiceDefined = true;
-			}
-		} catch (err) {
-			/* Ignore. */
-		}
-		if ("undefined" === typeof unsafeWindow || !bGreasemonkeyServiceDefined) {
-			unsafeWindow = (function () {
-				var dummyElem = document.createElement('p');
-				dummyElem.setAttribute('onclick', 'return window;');
-				return dummyElem.onclick();
-			})();
-		}
-		/* begin running the code! */
-		if (('undefined' !== typeof W.loginManager.events.register) &&
-			('undefined' !== typeof W.map)) {
+        if (window.W && window.W.loginManager &&
+            window.W.loginManager.events.register &&
+            window.W.map) {
 			log('Initializing...', 0);
-			window.setTimeout(init, 100);
+            init();
 		} else {
 			log('Bootstrap failed. Trying again...', 0);
 			window.setTimeout(function () {
@@ -301,5 +286,5 @@
 		}
 	}
 	log('Bootstrap...', 0);
-	window.setTimeout(bootstrap, 100);
-})();
+    bootstrap();
+} ());
