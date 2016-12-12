@@ -16,7 +16,7 @@ v 1.0.2 - Last version by SAR85
 
 ## Installation
 
-Install just like any other userscript by just clicking this link:
+Install just like any other userscript by clicking this link:
 https://github.com/TheCre8r/WME-Closest-Segment/raw/master/WME-Closest-Segment.user.js
 
 ## Forum
