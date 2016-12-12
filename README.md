@@ -4,6 +4,8 @@
 
 Adds a line from a place to the nearest road segment.
 
+![Screenshot](http://image.prntscr.com/image/ad6e5f7a36c04fcd82f799a76180b4ca.png)
+
 ## Version History
 
 v 1.0.2.2 - Removed Library
