@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.0.2.3
+// @version      	1.0.2.4
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -16,7 +16,7 @@
 
 (function () {
 	var alertUpdate = true,
-		closestVersion = '1.0.2.3',
+		closestVersion = '1.0.2.4',
 		closestChanges = 'WME Closest Segment has been updated to version ' +
 			closestVersion + '.\n\n' +
 			'[*] Bug fix: when switching a Place from point to area the area geometry could not be modidified until the place was saved.',
@@ -266,10 +266,11 @@
 	}
 
     function ObjectsChanged(){
-        if(placeIsPoint && W.geometryEditing.activeEditor.vertices.length > 0){
-            removeDragCallbacks();
-            checkSelection();
-        }
+        if(W.map.getLayerByUniqueName('landmarks').selectedFeatures.length >0)
+            if(placeIsPoint && W.geometryEditing.activeEditor.vertices.length > 0){
+                removeDragCallbacks();
+                checkSelection();
+            }
     }
 
 	function bootstrap() {
