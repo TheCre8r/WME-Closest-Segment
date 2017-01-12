@@ -16,7 +16,7 @@
 
 (function () {
 	var alertUpdate = true,
-		closestVersion = '1.0.2.2',
+		closestVersion = '1.0.2.3',
 		closestChanges = 'WME Closest Segment has been updated to version ' +
 			closestVersion + '.\n\n' +
 			'[*] Bug fix: when switching a Place from point to area the area geometry could not be modidified until the place was saved.',
