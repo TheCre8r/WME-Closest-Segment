@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.0.2.2
+// @version      	1.0.2.3
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -19,7 +19,7 @@
 		closestVersion = '1.0.2.2',
 		closestChanges = 'WME Closest Segment has been updated to version ' +
 			closestVersion + '.\n\n' +
-			'[*] Compatibility Update',
+			'[*] Bug fix: when switching a Place from point to area the area geometry could not be modidified until the place was saved.',
 		closestLayerName = 'WME Closest Segment',
 		debugLevel = 0,
 		segmentsInExtent = {},
@@ -111,7 +111,7 @@
 	function removeDragCallbacks() {
         if(!W.geometryEditing.activeEditor == null){
             W.geometryEditing.activeEditor.dragControl.onDrag = function (e, t) {
-                W.geometryEditing.activeEditor.venue.dragVertex.apply(W.geometryEditing.activeEditor, [e, t]);
+                W.geometryEditing.activeEditor.dragVertex.apply(W.geometryEditing.activeEditor, [e, t]);
             };
             if (null !== typeof navPoint) {
                 try {
@@ -190,6 +190,7 @@
 		drawLine(closestSegment);
 	}
 
+    var placeIsPoint = false;
 	function checkSelection() {
 		'use strict';
 		log('Selection change called.', 2);
@@ -207,10 +208,11 @@
 				} else {
                     navPoint = W.geometryEditing.activeEditor.navigationPoint;
 					getSegmentsInExtent();
-					if (selectedItem.model.isPoint()) {
+                    placeIsPoint = selectedItem.model.isPoint();
+					if (placeIsPoint) {
 						log('Selection is point venue.', 2);
 						W.geometryEditing.activeEditor.dragControl.onDrag = function (e, t) {
-							//W.geometryEditing.activeEditor.venue.dragVertex.apply(W.geometryEditing.activeEditor, [e, t]);
+							W.geometryEditing.activeEditor.dragVertex.apply(W.geometryEditing.activeEditor, [e, t]);
 							findNearestSegment();
 						};
 						findNearestSegment();
@@ -256,11 +258,19 @@
 		W.model.actionManager.events.register('afterundoaction', this, checkSelection);
 		W.model.actionManager.events.register('afteraction', this, checkSelection);
 		W.selectionManager.events.register('selectionchanged', this, checkSelection);
+        W.model.venues.on('objectschanged', ObjectsChanged);
 
 		checkSelection();
 
 		log('Initialized.', 0);
 	}
+
+    function ObjectsChanged(){
+        if(placeIsPoint && W.geometryEditing.activeEditor.vertices.length > 0){
+            removeDragCallbacks();
+            checkSelection();
+        }
+    }
 
 	function bootstrap() {
         if (window.W && window.W.loginManager &&
