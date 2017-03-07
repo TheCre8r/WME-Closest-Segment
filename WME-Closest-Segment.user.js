@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.0.2.5
+// @version      	1.0.2.6
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -11,6 +11,7 @@
 // @include			https://www.waze.com/editor/*
 // @include			https://www.waze.com/*/editor/*
 // @include			https://beta.waze.com/*
+// @exclude                     https://www.waze.com/user/editor*
 // @namespace		https://greasyfork.org/en/users/13670-the-cre8r
 // ==/UserScript==
 
