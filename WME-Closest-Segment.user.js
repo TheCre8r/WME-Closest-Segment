@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.0.2.7
+// @version      	1.0.2.8
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -98,9 +98,10 @@
 		var a = W.map.getZoom() > 3,
 			b = W.map.landmarkLayer.getVisibility(),
 			c = W.map.getLayersByName(closestLayerName)[0].getVisibility(),
-			d = !$('#map-lightbox').is(':visible'); /* Check for HN editing */
+			d = !$('#map-lightbox').is(':visible'),/* Check for HN editing */
+            e = W.selectionManager.selectedItems[0].model.type !== "bigJunction";
 
-		if (a && b && c && d) {
+		if (a && b && c && d && e) {
 			log('Conditions are perfect.', 2);
 			return true;
 		} else {
