@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.0.2.8
+// @version      	1.0.2.9
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -99,7 +99,7 @@
 			b = W.map.landmarkLayer.getVisibility(),
 			c = W.map.getLayersByName(closestLayerName)[0].getVisibility(),
 			d = !$('#map-lightbox').is(':visible'),/* Check for HN editing */
-            e = W.selectionManager.selectedItems[0].model.type !== "bigJunction";
+            e = (W.selectionManager.hasSelectedItems() && W.selectionManager.selectedItems[0].model.type !== "bigJunction");
 
 		if (a && b && c && d && e) {
 			log('Conditions are perfect.', 2);
