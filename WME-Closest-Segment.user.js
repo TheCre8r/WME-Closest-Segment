@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.0.2.9
+// @version      	1.0.3.0
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -205,12 +205,10 @@
 			if (W.selectionManager.hasSelectedItems()) {
 				selectedItem = W.selectionManager.selectedItems[0];
 
-                if(/beta/.test(location.href))
-                    navPoint = W.geometryEditing.activeEditor._navigationPointMarker;
-                else
-                    navPoint = W.geometryEditing.activeEditor.navigationPoint;
+                navPoint = W.geometryEditing.activeEditor._navigationPointMarker;
 
-				if ('venue' !== selectedItem.model.type) {
+
+                if ('venue' !== selectedItem.model.type) {
 					log('Selection is not a place.', 2);
 					removeDragCallbacks();
 					clearLayerFeatures();
