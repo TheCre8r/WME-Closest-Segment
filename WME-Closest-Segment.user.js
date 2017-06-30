@@ -3,7 +3,7 @@
 // ==UserScript==
 // @name         	WME Closest Segment
 // @description		Shows the closest segment to a place
-// @version      	1.0.3.0
+// @version      	1.0.3.1
 // @author			SAR85
 // @copyright		SAR85
 // @license		 	CC BY-NC-ND
@@ -17,7 +17,7 @@
 
 (function () {
 	var alertUpdate = true,
-		closestVersion = '1.0.2.4',
+		closestVersion = '1.0.3.1',
 		closestChanges = 'WME Closest Segment has been updated to version ' +
 			closestVersion + '.\n\n' +
 			'[*] Bug fix: when switching a Place from point to area the area geometry could not be modidified until the place was saved.',
@@ -282,6 +282,9 @@
     }
 
 	function bootstrap() {
+        alert("WME Closest Segment has been deprecated.  Please install WME Place Interface Enhancements to recover this functionality (and much more!)");
+        window.open("https://www.waze.com/forum/viewtopic.php?f=819&t=215990");
+        return;
         if (window.W && window.W.loginManager &&
             window.W.loginManager.events.register &&
             window.W.map) {
